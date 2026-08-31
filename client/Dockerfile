@@ -16,7 +16,8 @@ COPY package*.json ./
 RUN npm install --omit=dev
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/index.html ./
 
 EXPOSE 5173
 
-CMD ["npx", "vite", "--host", "0.0.0.0"]
+CMD ["npx", "vite", "preview", "--host", "0.0.0.0"]
