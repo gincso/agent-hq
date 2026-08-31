@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  agent-hq-client:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agent_hq_client
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    depends_on:
+      - agent-hq-server
+    environment:
+      - NODE_ENV=production
