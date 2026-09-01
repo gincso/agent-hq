@@ -13,7 +13,7 @@ export default function App() {
   const ws = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    const socket = new WebSocket('ws://localhost:3000');
+    const socket = new WebSocket('ws://localhost:3001');
     ws.current = socket;
 
     socket.onmessage = (event) => {
