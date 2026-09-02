@@ -9,26 +9,44 @@ export default function App() {
   const [promptInput, setPromptInput] = useState('');
   const [streamData, setStreamData] = useState<{ agentId: string; chunk: string } | null>(null);
   const [terminalFeed, setTerminalFeed] = useState<string[]>([]);
+  const [connected, setConnected] = useState(false);
   
   const ws = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    const socket = new WebSocket('ws://localhost:3001');
+    const wsUrl = `ws://${window.location.hostname}:3001`;
+    console.log('Connecting to WebSocket:', wsUrl);
+    const socket = new WebSocket(wsUrl);
     ws.current = socket;
 
-    socket.onmessage = (event) => {
-      const { type, payload } = JSON.parse(event.data);
+    socket.onopen = () => {
+      console.log('WebSocket connected');
+      setConnected(true);
+    };
 
-      if (type === 'INIT_STATE') {
-        setAgents(payload.agents);
-      } else if (type === 'AGENT_STATUS') {
+    socket.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      console.log('WS message:', msg.type);
+
+      if (msg.type === 'INIT_STATE') {
+        setAgents(msg.payload.agents);
+      } else if (msg.type === 'AGENT_STATUS') {
         setAgents((prev) =>
-          prev.map((a) => (a.id === payload.agentId ? { ...a, status: payload.status } : a))
+          prev.map((a) => (a.id === msg.payload.agentId ? { ...a, status: msg.payload.status } : a))
         );
-      } else if (type === 'AGENT_STREAM_CHUNK') {
-        setStreamData({ agentId: payload.agentId, chunk: payload.chunk });
-        setTerminalFeed((prev) => [...prev.slice(-40), `[${payload.agentId}]: ${payload.chunk}`]);
+      } else if (msg.type === 'AGENT_STREAM_CHUNK') {
+        setStreamData({ agentId: msg.payload.agentId, chunk: msg.payload.chunk });
+        setTerminalFeed((prev) => [...prev.slice(-40), `[${msg.payload.agentId}]: ${msg.payload.chunk}`]);
       }
+    };
+
+    socket.onclose = () => {
+      console.log('WebSocket disconnected');
+      setConnected(false);
+    };
+
+    socket.onerror = (e) => {
+      console.log('WebSocket error:', e);
     };
 
     return () => socket.close();
@@ -36,7 +54,7 @@ export default function App() {
 
   const handleSendTask = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!promptInput.trim() || !ws.current) return;
+    if (!promptInput.trim() || !ws.current || ws.current.readyState !== WebSocket.OPEN) return;
 
     ws.current.send(
       JSON.stringify({
@@ -56,6 +74,9 @@ export default function App() {
         <div>
           <h1 className="text-xl font-bold tracking-tight text-sky-400">AGENT HQ // VIRTUAL OFFICE</h1>
           <p className="text-xs text-slate-400 font-mono">Autonomous Pixel Workspace</p>
+        </div>
+        <div className={`px-3 py-1 rounded text-xs font-mono ${connected ? 'bg-emerald-900 text-emerald-400' : 'bg-red-900 text-red-400'}`}>
+          {connected ? '● CONNECTED' : '○ DISCONNECTED'}
         </div>
       </header>
 
